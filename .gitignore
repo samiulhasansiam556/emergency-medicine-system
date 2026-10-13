@@ -1,0 +1,19 @@
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Node dependencies and builds
+node_modules/
+dist/
+.next/
+
+# Python environment and cache
+.venv/
+__pycache__/
+*.py[cod]
+
+# Generated ML artifacts
+ml-service/artifacts/
+ml-service/reports/
