@@ -14,6 +14,10 @@ export interface IPharmacy extends Document {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  geo?: {
+    type: "Point";
+    coordinates: [number, number]; // [longitude, latitude]
+  };
 }
 
 const pharmacySchema = new Schema<IPharmacy>(
@@ -72,6 +76,18 @@ const pharmacySchema = new Schema<IPharmacy>(
       },
     },
 
+    geo: {
+      type: { type: String, enum: ["Point"] },
+      coordinates: {
+        type: [Number],
+        default: undefined, // important: empty array dile 2dsphere index error dey
+        validate: {
+          validator: (v: number[]) => v.length === 2,
+          message: "Coordinates must be [longitude, latitude]",
+        },
+      },
+    },
+
     isActive: {
       type: Boolean,
       default: true,
@@ -81,6 +97,10 @@ const pharmacySchema = new Schema<IPharmacy>(
     timestamps: true,
   },
 );
+
+
+pharmacySchema.index({ geo: "2dsphere" });
+
 
 const Pharmacy: Model<IPharmacy> =
   (mongoose.models.Pharmacy as Model<IPharmacy> | undefined) ??

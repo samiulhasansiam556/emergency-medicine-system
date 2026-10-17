@@ -5,6 +5,7 @@ import {
   getPharmacyById,
   updatePharmacy,
   deactivatePharmacy,
+  getMyPharmacies,
 } from "../services/pharmacy.service";
 
 function handleError(res: Response, error: unknown) {
@@ -27,18 +28,18 @@ function handleError(res: Response, error: unknown) {
 
 export async function createPharmacyController(req: Request, res: Response) {
   try {
-    const { name, ownerId, address, city, phone, imageUrl, latitude, longitude } = req.body;
-
+    const { name, address, city, phone, imageUrl, latitude, longitude } = req.body;
+    const ownerId = req.user!.role === "ADMIN" && typeof req.body.ownerId === "string"
+    ? req.body.ownerId : req.user!.id;
     if (
       typeof name !== "string" || !name.trim() ||
-      typeof ownerId !== "string" ||
       typeof address !== "string" || !address.trim() ||
       typeof city !== "string" || !city.trim() ||
       typeof phone !== "string" || !phone.trim()
     ) {
       res.status(400).json({
         success: false,
-        message: "name, ownerId, address, city, and phone are required.",
+        message: "name, address, city, and phone are required.",
       });
       return;
     }
@@ -97,6 +98,15 @@ export async function deactivatePharmacyController(req: Request, res: Response) 
   try {
     const pharmacy = await deactivatePharmacy(req.params.id as string);
     res.status(200).json({ success: true, message: "Pharmacy deactivated.", data: pharmacy });
+  } catch (error) {
+    handleError(res, error);
+  }
+}
+
+export async function getMyPharmaciesController(req: Request, res: Response) {
+  try {
+    const pharmacies = await getMyPharmacies(req.user!.id, req.user!.role);
+    res.status(200).json({ success: true, count: pharmacies.length, data: pharmacies });
   } catch (error) {
     handleError(res, error);
   }

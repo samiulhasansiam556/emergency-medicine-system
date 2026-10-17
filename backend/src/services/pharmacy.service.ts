@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 import Pharmacy from "../models/Pharmacy";
 
@@ -14,16 +13,8 @@ interface CreatePharmacyInput {
 }
 
 export async function createPharmacy(input: CreatePharmacyInput) {
-  const {
-    name,
-    ownerId,
-    address,
-    city,
-    phone,
-    imageUrl,
-    latitude,
-    longitude,
-  } = input;
+  const { name, ownerId, address, city, phone, imageUrl, latitude, longitude } =
+    input;
 
   if (!mongoose.isValidObjectId(ownerId)) {
     throw new Error("Invalid owner ID.");
@@ -34,6 +25,14 @@ export async function createPharmacy(input: CreatePharmacyInput) {
       ? { latitude, longitude }
       : undefined;
 
+  const geo =
+    location !== undefined
+      ? {
+          type: "Point" as const,
+          coordinates: [location.longitude, location.latitude],
+        }
+      : undefined;
+
   const pharmacy = await Pharmacy.create({
     name,
     ownerId,
@@ -42,8 +41,8 @@ export async function createPharmacy(input: CreatePharmacyInput) {
     phone,
     imageUrl,
     location,
+    geo,
   });
-
   return pharmacy;
 }
 
@@ -73,7 +72,6 @@ export async function getPharmacyById(id: string) {
   return pharmacy;
 }
 
-
 export async function updatePharmacy(
   id: string,
   input: Partial<{
@@ -84,7 +82,7 @@ export async function updatePharmacy(
     imageUrl: string;
     latitude: number;
     longitude: number;
-  }>
+  }>,
 ) {
   if (!mongoose.isValidObjectId(id)) {
     throw new Error("Invalid pharmacy ID.");
@@ -100,8 +98,10 @@ export async function updatePharmacy(
     if (
       typeof input.latitude !== "number" ||
       typeof input.longitude !== "number" ||
-      input.latitude < -90 || input.latitude > 90 ||
-      input.longitude < -180 || input.longitude > 180
+      input.latitude < -90 ||
+      input.latitude > 90 ||
+      input.longitude < -180 ||
+      input.longitude > 180
     ) {
       throw new Error("Valid latitude and longitude are required together.");
     }
@@ -112,10 +112,15 @@ export async function updatePharmacy(
     };
   }
 
+  updates.geo = {
+  type: "Point",
+  coordinates: [input.longitude, input.latitude],
+};
+
   const pharmacy = await Pharmacy.findOneAndUpdate(
     { _id: id, isActive: true },
     { $set: updates },
-    { new: true, runValidators: true }
+    { new: true, runValidators: true },
   ).select("-__v");
 
   if (!pharmacy) throw new Error("Pharmacy not found.");
@@ -131,10 +136,17 @@ export async function deactivatePharmacy(id: string) {
   const pharmacy = await Pharmacy.findOneAndUpdate(
     { _id: id, isActive: true },
     { $set: { isActive: false } },
-    { new: true }
+    { new: true },
   ).select("-__v");
 
   if (!pharmacy) throw new Error("Pharmacy not found.");
 
   return pharmacy;
+}
+
+export async function getMyPharmacies(userId: string, role: string) {
+  const filter =
+    role === "ADMIN" ? { isActive: true } : { ownerId: userId, isActive: true };
+
+  return Pharmacy.find(filter).select("-__v").sort({ createdAt: -1 }).lean();
 }

@@ -78,6 +78,11 @@ const medicineSchema = new Schema<IMedicine>(
   }
 );
 
+medicineSchema.index(
+  { name: 1, strength: 1, dosageForm: 1 },
+  { unique: true }
+);
+
 const Medicine: Model<IMedicine> =
   (mongoose.models.Medicine as Model<IMedicine> | undefined) ??
   mongoose.model<IMedicine>("Medicine", medicineSchema);

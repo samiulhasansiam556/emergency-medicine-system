@@ -20,23 +20,23 @@ export async function updateStockController(
     const {
       pharmacyId,
       medicineId,
-      userId,
       movementType,
       quantityChange,
       note,
     } = req.body;
 
+    const userId = req.user!.id;
+
     if (
       typeof pharmacyId !== "string" ||
       typeof medicineId !== "string" ||
-      typeof userId !== "string" ||
       !mongoose.isValidObjectId(pharmacyId) ||
       !mongoose.isValidObjectId(medicineId) ||
       !mongoose.isValidObjectId(userId)
     ) {
       res.status(400).json({
         success: false,
-        message: "Valid pharmacyId, medicineId, and userId are required.",
+        message: "Valid pharmacyId, medicineId are required.",
       });
       return;
     }

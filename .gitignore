@@ -17,3 +17,4 @@ __pycache__/
 # Generated ML artifacts
 ml-service/artifacts/
 ml-service/reports/
+ml-service/data/
