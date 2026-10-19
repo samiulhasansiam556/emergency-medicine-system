@@ -110,12 +110,12 @@ export async function updatePharmacy(
       latitude: input.latitude,
       longitude: input.longitude,
     };
-  }
 
-  updates.geo = {
-  type: "Point",
-  coordinates: [input.longitude, input.latitude],
-};
+    updates.geo = {
+      type: "Point",
+      coordinates: [input.longitude, input.latitude],
+    };
+  }
 
   const pharmacy = await Pharmacy.findOneAndUpdate(
     { _id: id, isActive: true },
@@ -149,4 +149,34 @@ export async function getMyPharmacies(userId: string, role: string) {
     role === "ADMIN" ? { isActive: true } : { ownerId: userId, isActive: true };
 
   return Pharmacy.find(filter).select("-__v").sort({ createdAt: -1 }).lean();
+}
+
+
+export async function getNearbyPharmacies(params: {
+  latitude: number;
+  longitude: number;
+  radiusKm: number;
+  limit: number;
+}) {
+  const { latitude, longitude, radiusKm, limit } = params;
+
+  const rows = await Pharmacy.aggregate([
+    {
+      $geoNear: {
+        near: { type: "Point", coordinates: [longitude, latitude] },
+        distanceField: "distanceMeters",
+        maxDistance: radiusKm * 1000,
+        spherical: true,
+        key: "geo",
+        query: { isActive: true },
+      },
+    },
+    { $limit: limit },
+    { $project: { name: 1, address: 1, city: 1, phone: 1, imageUrl: 1, location: 1, distanceMeters: 1 } },
+  ]);
+
+  return rows.map((r) => ({
+    ...r,
+    distanceKm: Math.round((r.distanceMeters / 1000) * 100) / 100,
+  }));
 }

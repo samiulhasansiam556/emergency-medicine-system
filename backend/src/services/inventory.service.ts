@@ -126,3 +126,46 @@ export async function updateStock(
     await session.endSession();
   }
 }
+
+
+export async function setStock(input: {
+  pharmacyId: string;
+  medicineId: string;
+  userId: string;
+  newQuantity: number;
+  note?: string;
+}): Promise<UpdateStockResult> {
+  const { pharmacyId, medicineId, userId, newQuantity, note } = input;
+
+  if (!mongoose.isValidObjectId(pharmacyId) || !mongoose.isValidObjectId(medicineId)) {
+    throw new Error("Invalid pharmacy, medicine, or user ID.");
+  }
+  if (!Number.isInteger(newQuantity) || newQuantity < 0) {
+    throw new Error("Invalid quantity.");
+  }
+
+  const inventory = await Inventory.findOne({ pharmacyId, medicineId }).select("quantity");
+  if (!inventory) throw new Error("Inventory record not found.");
+
+  const diff = newQuantity - inventory.quantity;
+
+  if (diff === 0) {
+    return {
+      inventoryId: inventory._id.toString(),
+      previousQuantity: inventory.quantity,
+      quantityAfter: inventory.quantity,
+      quantityChange: 0,
+      movementType: "ADJUSTMENT",
+    };
+  }
+
+  // Goes through updateStock so StockHistory is written as an ADJUSTMENT.
+  return updateStock({
+    pharmacyId,
+    medicineId,
+    userId,
+    movementType: "ADJUSTMENT",
+    quantityChange: diff,
+    note: note ?? `Stocktake: quantity set to ${newQuantity}`,
+  });
+}

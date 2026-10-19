@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
+import Pharmacy from "../models/Pharmacy";
 import Medicine from "../models/Medicine";
 import Inventory from "../models/Inventory";
-import Pharmacy from "../models/Pharmacy";
-import { getStockStatus } from "./inventoryRecord.service";
+import { getStockStatus,STALE_HOURS } from "./inventoryRecord.service";
 
 function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -15,11 +15,11 @@ interface SearchParams {
   longitude: number;
   radiusKm: number;
   limit: number;
+  sort?: "distance" | "freshness";
 }
 
 export async function searchNearbyAvailability(params: SearchParams) {
-  const { q, medicineId, latitude, longitude, radiusKm, limit } = params;
-
+  const { q, medicineId, latitude, longitude, radiusKm, limit, sort = "distance" } = params;
   // 1. Which medicines match the search?
   let medicineIds: mongoose.Types.ObjectId[] = [];
 
@@ -88,16 +88,21 @@ export async function searchNearbyAvailability(params: SearchParams) {
 
   // 4. Attach the available medicines to each pharmacy.
   const now = Date.now();
+  const staleMinutes = STALE_HOURS * 60;
 
   const data = nearby.map((pharmacy) => {
     const available = inventories
       .filter((i) => i.pharmacyId.toString() === pharmacy._id.toString())
-      .map((i) => ({
-        medicine: i.medicineId,
-        status: getStockStatus(i.quantity, i.reorderLevel),
-        lastStockUpdatedAt: i.lastStockUpdatedAt,
-        minutesSinceUpdate: Math.round((now - new Date(i.lastStockUpdatedAt).getTime()) / 60000),
-      }));
+      .map((i) => {
+        const minutesSinceUpdate = Math.round((now - new Date(i.lastStockUpdatedAt).getTime()) / 60000);
+        return {
+          medicine: i.medicineId,
+          status: getStockStatus(i.quantity, i.reorderLevel),
+          lastStockUpdatedAt: i.lastStockUpdatedAt,
+          minutesSinceUpdate,
+          isStale: minutesSinceUpdate > staleMinutes,
+        };
+      });
 
     return {
       pharmacy: {
@@ -110,9 +115,13 @@ export async function searchNearbyAvailability(params: SearchParams) {
         location: pharmacy.location,
       },
       distanceKm: Math.round((pharmacy.distanceMeters / 1000) * 100) / 100,
+      freshestUpdateMinutes: Math.min(...available.map((a) => a.minutesSinceUpdate)),
       available,
     };
   });
 
-  return { radiusKm, count: data.length, data };
-}
+  if (sort === "freshness") {
+    data.sort((a, b) => a.freshestUpdateMinutes - b.freshestUpdateMinutes);
+  }
+
+  return { radiusKm, count: data.length, data }};

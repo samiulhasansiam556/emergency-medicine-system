@@ -6,6 +6,8 @@ import ShortagePrediction, {
 import ModelRun from "../models/ModelRun";
 import Medicine from "../models/Medicine";
 
+
+
 export const RISK_LEVELS: ShortageRiskLevel[] = [
   "HIGH",
   "MEDIUM",
@@ -22,7 +24,7 @@ function escapeRegex(text: string): string {
 //   - only the active model's predictions
 //   - only the newest day of data (asOfDate)
 // ---------------------------------------------------------------
-async function getActiveVersion(): Promise<string | null> {
+export async function getActiveVersion(): Promise<string | null> {
   const run = await ModelRun.findOne({ isActive: true }).select("version").lean();
   if (run) return run.version;
 
@@ -34,7 +36,7 @@ async function getActiveVersion(): Promise<string | null> {
   return latest?.modelVersion ?? null;
 }
 
-async function currentScope(pharmacyId?: string) {
+export async function currentScope(pharmacyId?: string) {
   const version = await getActiveVersion();
   if (!version) return null;
 
@@ -243,4 +245,38 @@ export async function listRisk(params: ListParams) {
     total,
     data,
   };
+}
+
+// One medicine in one pharmacy: its risk over the last N prediction days (for a chart).
+export async function getRiskHistory(params: { pharmacyId: string; medicineId: string; days: number }) {
+  const { pharmacyId, medicineId, days } = params;
+
+  if (!mongoose.isValidObjectId(pharmacyId)) throw new Error("Invalid pharmacy ID.");
+  if (!mongoose.isValidObjectId(medicineId)) throw new Error("Invalid medicine ID.");
+
+  const version = await getActiveVersion();
+  if (!version) return { available: false, data: [] };
+
+  const rows = await ShortagePrediction.find({
+    pharmacyId,
+    medicineId,
+    modelVersion: version,
+    asOfDate: { $exists: true },
+  })
+    .sort({ asOfDate: -1 })
+    .limit(days)
+    .select("asOfDate riskLevel shortageProbability features actualStockout")
+    .lean();
+
+  const data = rows.reverse().map((r) => ({
+    date: r.asOfDate,
+    riskLevel: r.riskLevel,
+    probability: r.shortageProbability ?? null,
+    stockEnd: r.features?.stockEnd ?? null,
+    daysOfStockLeft: r.features?.daysOfStockLeft ?? null,
+    avgDemand7d: r.features?.avgDemand7d ?? null,
+    actualStockout: r.actualStockout ?? null,
+  }));
+
+  return { available: true, modelVersion: version, data };
 }

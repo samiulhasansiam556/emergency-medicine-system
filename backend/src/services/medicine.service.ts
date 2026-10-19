@@ -102,3 +102,11 @@ export async function deactivateMedicine(id: string) {
   if (!medicine) throw new Error("Medicine not found.");
   return medicine;
 }
+
+export async function listCategories(): Promise<string[]> {
+  const categories = (await Medicine.distinct("category", {
+    isActive: true,
+    category: { $exists: true, $ne: "" },
+  })) as string[];
+  return categories.sort((a, b) => a.localeCompare(b));
+}

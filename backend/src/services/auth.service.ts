@@ -35,8 +35,7 @@ export async function registerUser(input: RegisterInput) {
   const email = input.email.trim().toLowerCase();
 
   // Public signup can never create ADMIN accounts.
-  const role: UserRole =
-    input.role === "PHARMACY_OWNER" ? "PHARMACY_OWNER" : "USER";
+  const role: UserRole = input.role === "PHARMACY_OWNER" ? "PHARMACY_OWNER" : "USER";
 
   const existing = await User.findOne({ email });
   if (existing) throw new Error("Email is already registered.");
@@ -79,4 +78,36 @@ export async function getUserById(id: string) {
   const user = await User.findOne({ _id: id, isActive: true }).select("-__v");
   if (!user) throw new Error("User not found.");
   return user;
+}
+
+
+export async function updateProfile(userId: string, input: { name?: unknown }) {
+  const name = typeof input.name === "string" ? input.name.trim() : "";
+  if (name.length < 2 || name.length > 100) {
+    throw new Error("Invalid name. Must be 2 to 100 characters.");
+  }
+
+  const user = await User.findOneAndUpdate(
+    { _id: userId, isActive: true },
+    { $set: { name } },
+    { new: true, runValidators: true }
+  ).select("-__v");
+
+  if (!user) throw new Error("User not found.");
+  return { id: user._id.toString(), name: user.name, email: user.email, role: user.role };
+}
+
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  if (newPassword.length < 8 || newPassword.length > 72) {
+    throw new Error("Invalid new password. Must be 8 to 72 characters.");
+  }
+
+  const user = await User.findOne({ _id: userId, isActive: true }).select("+passwordHash");
+  if (!user) throw new Error("User not found.");
+
+  const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!ok) throw new Error("Current password is incorrect.");
+
+  user.passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  await user.save();
 }

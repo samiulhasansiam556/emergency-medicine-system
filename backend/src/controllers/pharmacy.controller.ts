@@ -6,6 +6,7 @@ import {
   updatePharmacy,
   deactivatePharmacy,
   getMyPharmacies,
+  getNearbyPharmacies
 } from "../services/pharmacy.service";
 
 function handleError(res: Response, error: unknown) {
@@ -107,6 +108,30 @@ export async function getMyPharmaciesController(req: Request, res: Response) {
   try {
     const pharmacies = await getMyPharmacies(req.user!.id, req.user!.role);
     res.status(200).json({ success: true, count: pharmacies.length, data: pharmacies });
+  } catch (error) {
+    handleError(res, error);
+  }
+}
+
+export async function nearbyPharmaciesController(req: Request, res: Response) {
+  try {
+    const latitude = Number(req.query.lat);
+    const longitude = Number(req.query.lng);
+
+    if (
+      req.query.lat === undefined || req.query.lng === undefined ||
+      !Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+      latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180
+    ) {
+      res.status(400).json({ success: false, message: "Valid lat and lng are required." });
+      return;
+    }
+
+    const radiusKm = Math.min(50, Math.max(0.5, Number(req.query.radiusKm) || 5));
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+
+    const data = await getNearbyPharmacies({ latitude, longitude, radiusKm, limit });
+    res.status(200).json({ success: true, radiusKm, count: data.length, data });
   } catch (error) {
     handleError(res, error);
   }

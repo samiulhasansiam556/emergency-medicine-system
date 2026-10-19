@@ -5,6 +5,7 @@ import {
   getMedicineByIdController,
   updateMedicineController,
   deactivateMedicineController,
+  listCategoriesController
 } from "../controllers/medicine.controller";
 import { authenticate, authorize } from "../middleware/auth.middleware";
 
@@ -12,6 +13,7 @@ const router = Router();
 
 // Public
 router.get("/", searchMedicinesController);
+router.get("/categories", listCategoriesController);
 router.get("/:id", getMedicineByIdController);
 
 // Pharmacy owners can add medicines to the catalog; only admins edit or remove.

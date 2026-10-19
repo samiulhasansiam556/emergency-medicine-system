@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { verifyToken } from "../services/auth.service";
 import { UserRole } from "../models/User";
 import Pharmacy from "../models/Pharmacy";
+import Inventory from "../models/Inventory";
 
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   const header = req.headers.authorization;
@@ -94,4 +95,33 @@ export async function requirePharmacyScope(
   }
 
   await requirePharmacyAccess(req, res, next);
+}
+// For routes like DELETE /inventory/:id where :id is an inventory record.
+export async function requireInventoryAccess(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const id = req.params.id as string;
+
+  if (!mongoose.isValidObjectId(id)) {
+    res.status(400).json({ success: false, message: "Valid inventory ID is required." });
+    return;
+  }
+
+  const inventory = await Inventory.findById(id).select("pharmacyId");
+  if (!inventory) {
+    res.status(404).json({ success: false, message: "Inventory record not found." });
+    return;
+  }
+
+  if (req.user?.role !== "ADMIN") {
+    const pharmacy = await Pharmacy.findOne({ _id: inventory.pharmacyId, isActive: true }).select("ownerId");
+    if (!pharmacy || pharmacy.ownerId.toString() !== req.user?.id) {
+      res.status(403).json({ success: false, message: "This is not your pharmacy." });
+      return;
+    }
+  }
+
+  next();
 }

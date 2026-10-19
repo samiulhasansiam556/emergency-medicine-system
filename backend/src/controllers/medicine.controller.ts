@@ -111,3 +111,14 @@ export async function deactivateMedicineController(req: Request, res: Response) 
     handleError(res, error);
   }
 }
+
+import { listCategories } from "../services/medicine.service";
+
+export async function listCategoriesController(_req: Request, res: Response) {
+  try {
+    const data = await listCategories();
+    res.status(200).json({ success: true, count: data.length, data });
+  } catch (error) {
+    handleError(res, error);
+  }
+}

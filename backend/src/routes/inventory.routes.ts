@@ -1,22 +1,35 @@
 import { Router } from "express";
-import { updateStockController } from "../controllers/inventory.controller";
+import { updateStockController, setStockController } from "../controllers/inventory.controller";
 import {
   createInventoryController,
   listPharmacyInventoryController,
   updateReorderLevelController,
+  removeInventoryController,
+  bulkInventoryController,
 } from "../controllers/inventoryRecord.controller";
-import { authenticate, authorize, requirePharmacyAccess } from "../middleware/auth.middleware";
+import {
+  authenticate,
+  authorize,
+  requirePharmacyAccess,
+  requireInventoryAccess,
+} from "../middleware/auth.middleware";
 
 const router = Router();
 
-const ownerOnly = [authenticate, authorize("PHARMACY_OWNER", "ADMIN"), requirePharmacyAccess];
+const roles = [authenticate, authorize("PHARMACY_OWNER", "ADMIN")];
+const ownerOnly = [...roles, requirePharmacyAccess];
 
-// Public: users can see what a pharmacy has.
+// Public: users can see what a pharmacy has. ?q=&status=&sort=&page=&limit=
 router.get("/pharmacy/:pharmacyId", listPharmacyInventoryController);
 
-// Protected
+// Protected (pharmacyId comes from the body)
 router.post("/", ...ownerOnly, createInventoryController);
+router.post("/bulk", ...ownerOnly, bulkInventoryController);
 router.patch("/stock", ...ownerOnly, updateStockController);
+router.patch("/stock/set", ...ownerOnly, setStockController);
 router.patch("/reorder-level", ...ownerOnly, updateReorderLevelController);
+
+// Protected (:id is the inventory record id)
+router.delete("/:id", ...roles, requireInventoryAccess, removeInventoryController);
 
 export default router;

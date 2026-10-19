@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import { registerUser, loginUser, getUserById } from "../services/auth.service";
+import { registerUser, loginUser, getUserById, updateProfile, changePassword } from "../services/auth.service";
+import { sendError } from "../utils/respond";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -60,5 +61,28 @@ export async function meController(req: Request, res: Response) {
     res.status(200).json({ success: true, data: user });
   } catch {
     res.status(404).json({ success: false, message: "User not found." });
+  }
+}
+
+export async function updateProfileController(req: Request, res: Response) {
+  try {
+    const data = await updateProfile(req.user!.id, { name: req.body?.name });
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    sendError(res, error, "Update profile");
+  }
+}
+
+export async function changePasswordController(req: Request, res: Response) {
+  try {
+    const { currentPassword, newPassword } = req.body ?? {};
+    if (typeof currentPassword !== "string" || typeof newPassword !== "string") {
+      res.status(400).json({ success: false, message: "currentPassword and newPassword are required." });
+      return;
+    }
+    await changePassword(req.user!.id, currentPassword, newPassword);
+    res.status(200).json({ success: true, message: "Password changed." });
+  } catch (error) {
+    sendError(res, error, "Change password");
   }
 }

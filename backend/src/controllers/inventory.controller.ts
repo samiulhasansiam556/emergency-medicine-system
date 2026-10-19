@@ -1,8 +1,10 @@
 
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { updateStock } from "../services/inventory.service";
+import { updateStock,setStock } from "../services/inventory.service";
 import { StockMovementType } from "../models/StockHistory";
+import { sendError } from "../utils/respond";
+
 
 const allowedMovements: StockMovementType[] = [
   "SALE",
@@ -115,5 +117,35 @@ export async function updateStockController(
       success: false,
       message: "Unable to update stock.",
     });
+  }
+}
+
+
+export async function setStockController(req: Request, res: Response): Promise<void> {
+  try {
+    const { pharmacyId, medicineId, quantity, note } = req.body ?? {};
+
+    if (
+      typeof pharmacyId !== "string" || typeof medicineId !== "string" ||
+      !mongoose.isValidObjectId(pharmacyId) || !mongoose.isValidObjectId(medicineId)
+    ) {
+      res.status(400).json({ success: false, message: "Valid pharmacyId and medicineId are required." });
+      return;
+    }
+    if (typeof quantity !== "number" || !Number.isInteger(quantity) || quantity < 0) {
+      res.status(400).json({ success: false, message: "quantity must be a non-negative integer." });
+      return;
+    }
+    if (note !== undefined && typeof note !== "string") {
+      res.status(400).json({ success: false, message: "note must be a string." });
+      return;
+    }
+
+    const data = await setStock({
+      pharmacyId, medicineId, userId: req.user!.id, newQuantity: quantity, note,
+    });
+    res.status(200).json({ success: true, message: "Stock set.", data });
+  } catch (error) {
+    sendError(res, error, "Set stock");
   }
 }

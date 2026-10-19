@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { RISK_LEVELS, getRiskSummary, listRisk } from "../services/risk.service";
+import { RISK_LEVELS, getRiskSummary,getRiskHistory, listRisk } from "../services/risk.service";
 import { ShortageRiskLevel } from "../models/ShortagePrediction";
 
 function readPharmacyId(req: Request): string | undefined {
@@ -42,5 +42,25 @@ export async function riskListController(req: Request, res: Response) {
   } catch (error) {
     console.error("Risk list failed:", error);
     res.status(500).json({ success: false, message: "Unable to load risk list." });
+  }
+}
+
+
+export async function riskHistoryController(req: Request, res: Response) {
+  try {
+    const pharmacyId = readPharmacyId(req);
+    const medicineId = typeof req.query.medicineId === "string" ? req.query.medicineId : undefined;
+
+    if (!pharmacyId || !medicineId || !mongoose.isValidObjectId(medicineId)) {
+      res.status(400).json({ success: false, message: "Valid pharmacyId and medicineId are required." });
+      return;
+    }
+
+    const days = Math.min(90, Math.max(1, Number(req.query.days) || 30));
+    const result = await getRiskHistory({ pharmacyId, medicineId, days });
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    console.error("Risk history failed:", error);
+    res.status(500).json({ success: false, message: "Unable to load risk history." });
   }
 }

@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   riskSummaryController,
   riskListController,
+  riskHistoryController
 } from "../controllers/risk.controller";
 import {
   authenticate,
@@ -16,5 +17,5 @@ router.use(authenticate, authorize("PHARMACY_OWNER", "ADMIN"));
 
 router.get("/summary", requirePharmacyScope, riskSummaryController);
 router.get("/", requirePharmacyScope, riskListController);
-
+router.get("/history", requirePharmacyScope, riskHistoryController);
 export default router;
