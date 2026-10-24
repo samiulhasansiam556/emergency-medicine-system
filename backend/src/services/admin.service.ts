@@ -318,3 +318,19 @@ export async function modelComparison(version?: string) {
     ),
   };
 }
+
+export async function deactivatePharmacy(id: string) {
+  assertId(id, "pharmacy");
+
+  const pharmacy = await Pharmacy.findOneAndUpdate(
+    { _id: id, isActive: true },
+    { $set: { isActive: false } },
+    { new: true }
+  ).select("-__v");
+
+  if (!pharmacy) {
+    throw new Error("Active pharmacy not found.");
+  }
+
+  return pharmacy;
+}

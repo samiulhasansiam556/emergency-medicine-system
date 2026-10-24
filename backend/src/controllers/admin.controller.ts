@@ -106,3 +106,22 @@ export async function modelComparisonController(req: Request, res: Response) {
     res.status(200).json({ success: true, ...result });
   } catch (e) { sendError(res, e, "Model comparison"); }
 }
+
+export async function deactivatePharmacyController(
+  req: Request,
+  res: Response
+) {
+  try {
+    const data = await admin.deactivatePharmacy(
+      req.params.id as string
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Pharmacy deactivated.",
+      data,
+    });
+  } catch (e) {
+    sendError(res, e, "Deactivate pharmacy");
+  }
+}

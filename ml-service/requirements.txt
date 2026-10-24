@@ -8,3 +8,5 @@ joblib>=1.4
 fastapi>=0.115
 uvicorn>=0.30
 pydantic>=2.8
+pymongo>=24.0
+python-dotenv
