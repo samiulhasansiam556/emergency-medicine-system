@@ -1,7 +1,6 @@
-
 import "dotenv/config";
 import mongoose from "mongoose";
-import User from "./models/User";
+import User from "../models/User";
 
 async function testDatabase(): Promise<void> {
   try {

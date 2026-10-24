@@ -1,7 +1,6 @@
-
 import "dotenv/config";
 import mongoose from "mongoose";
-import Medicine from "./models/Medicine";
+import Medicine from "../models/Medicine";
 
 async function testMedicine(): Promise<void> {
   try {

@@ -1,9 +1,8 @@
-
 import "dotenv/config";
 import mongoose from "mongoose";
-import Pharmacy from "./models/Pharmacy";
-import Medicine from "./models/Medicine";
-import ShortagePrediction from "./models/ShortagePrediction";
+import Pharmacy from "../models/Pharmacy";
+import Medicine from "../models/Medicine";
+import ShortagePrediction from "../models/ShortagePrediction";
 
 async function testShortagePrediction(): Promise<void> {
   try {

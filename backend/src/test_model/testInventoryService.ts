@@ -1,12 +1,11 @@
-
 import "dotenv/config";
 import mongoose from "mongoose";
-import User from "./models/User";
-import Pharmacy from "./models/Pharmacy";
-import Medicine from "./models/Medicine";
-import Inventory from "./models/Inventory";
-import StockHistory from "./models/StockHistory";
-import { updateStock } from "./services/inventory.service";
+import User from "../models/User";
+import Pharmacy from "../models/Pharmacy";
+import Medicine from "../models/Medicine";
+import Inventory from "../models/Inventory";
+import StockHistory from "../models/StockHistory";
+import { updateStock } from "../services/inventory.service";
 
 async function testInventoryService(): Promise<void> {
   try {
@@ -49,9 +48,7 @@ async function testInventoryService(): Promise<void> {
       note: "Test sale through inventory service",
     });
 
-    const updatedInventory = await Inventory.findById(
-      result.inventoryId
-    );
+    const updatedInventory = await Inventory.findById(result.inventoryId);
 
     const history = await StockHistory.findOne({
       inventoryId: result.inventoryId,

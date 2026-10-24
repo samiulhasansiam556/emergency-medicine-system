@@ -1,11 +1,10 @@
-
 import "dotenv/config";
 import mongoose from "mongoose";
-import User from "./models/User";
-import Pharmacy from "./models/Pharmacy";
-import Medicine from "./models/Medicine";
-import Inventory from "./models/Inventory";
-import { updateStock } from "./services/inventory.service";
+import User from "../models/User";
+import Pharmacy from "../models/Pharmacy";
+import Medicine from "../models/Medicine";
+import Inventory from "../models/Inventory";
+import { updateStock } from "../services/inventory.service";
 
 async function testInventoryValidation(): Promise<void> {
   try {

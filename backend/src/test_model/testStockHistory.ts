@@ -1,11 +1,10 @@
-
 import "dotenv/config";
 import mongoose from "mongoose";
-import User from "./models/User";
-import Pharmacy from "./models/Pharmacy";
-import Medicine from "./models/Medicine";
-import Inventory from "./models/Inventory";
-import StockHistory from "./models/StockHistory";
+import User from "../models/User";
+import Pharmacy from "../models/Pharmacy";
+import Medicine from "../models/Medicine";
+import Inventory from "../models/Inventory";
+import StockHistory from "../models/StockHistory";
 
 async function testStockHistory(): Promise<void> {
   try {
@@ -26,21 +25,20 @@ async function testStockHistory(): Promise<void> {
       name: "Paracetamol 500 mg",
     });
 
-    const inventory = pharmacy && medicine
-      ? await Inventory.findOne({
-          pharmacyId: pharmacy._id,
-          medicineId: medicine._id,
-        })
-      : null;
+    const inventory =
+      pharmacy && medicine
+        ? await Inventory.findOne({
+            pharmacyId: pharmacy._id,
+            medicineId: medicine._id,
+          })
+        : null;
 
     const owner = await User.findOne({
       email: { $regex: /^pharmacy-owner-/ },
     });
 
     if (!pharmacy || !medicine || !inventory || !owner) {
-      throw new Error(
-        "Test pharmacy, medicine, inventory or owner not found"
-      );
+      throw new Error("Test pharmacy, medicine, inventory or owner not found");
     }
 
     const history = await StockHistory.create({

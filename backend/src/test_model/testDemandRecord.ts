@@ -1,10 +1,9 @@
-
 import "dotenv/config";
 import mongoose from "mongoose";
-import User from "./models/User";
-import Pharmacy from "./models/Pharmacy";
-import Medicine from "./models/Medicine";
-import DemandRecord from "./models/DemandRecord";
+import User from "../models/User";
+import Pharmacy from "../models/Pharmacy";
+import Medicine from "../models/Medicine";
+import DemandRecord from "../models/DemandRecord";
 
 async function testDemandRecord(): Promise<void> {
   try {
@@ -24,9 +23,7 @@ async function testDemandRecord(): Promise<void> {
     });
 
     if (!pharmacy || !medicine || !owner) {
-      throw new Error(
-        "Test pharmacy, medicine, or pharmacy owner not found."
-      );
+      throw new Error("Test pharmacy, medicine, or pharmacy owner not found.");
     }
 
     const requestedQuantity = 50;

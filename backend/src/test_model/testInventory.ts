@@ -1,10 +1,9 @@
-
 import "dotenv/config";
 import mongoose from "mongoose";
-import User from "./models/User";
-import Pharmacy from "./models/Pharmacy";
-import Medicine from "./models/Medicine";
-import Inventory from "./models/Inventory";
+import User from "../models/User";
+import Pharmacy from "../models/Pharmacy";
+import Medicine from "../models/Medicine";
+import Inventory from "../models/Inventory";
 
 async function testInventory(): Promise<void> {
   try {
@@ -32,7 +31,7 @@ async function testInventory(): Promise<void> {
 
     if (!pharmacy || !medicine || !owner) {
       throw new Error(
-        "Test pharmacy, medicine or owner not found. Run the earlier tests first."
+        "Test pharmacy, medicine or owner not found. Run the earlier tests first.",
       );
     }
 
