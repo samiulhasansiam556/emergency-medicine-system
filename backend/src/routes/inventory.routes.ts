@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { updateStockController, setStockController } from "../controllers/inventory.controller";
+import { updateStockController, setStockController,recordSaleController, } from "../controllers/inventory.controller";
 import {
   createInventoryController,
   listPharmacyInventoryController,
   updateReorderLevelController,
   removeInventoryController,
   bulkInventoryController,
+  
 } from "../controllers/inventoryRecord.controller";
 import {
   authenticate,
@@ -28,7 +29,7 @@ router.post("/bulk", ...ownerOnly, bulkInventoryController);
 router.patch("/stock", ...ownerOnly, updateStockController);
 router.patch("/stock/set", ...ownerOnly, setStockController);
 router.patch("/reorder-level", ...ownerOnly, updateReorderLevelController);
-
+router.post("/sale", ...ownerOnly, recordSaleController);
 // Protected (:id is the inventory record id)
 router.delete("/:id", ...roles, requireInventoryAccess, removeInventoryController);
 

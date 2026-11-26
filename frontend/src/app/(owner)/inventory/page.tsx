@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -17,6 +16,8 @@ import type {
   OwnedPharmacy,
   StockStatus,
 } from "@/lib/types";
+
+import { recordSaleRequest } from "@/lib/api";
 
 const inputClass =
   "rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500";
@@ -51,8 +52,9 @@ export default function InventoryPage() {
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Medicine[]>([]);
-  const [selectedMedicine, setSelectedMedicine] =
-    useState<Medicine | null>(null);
+  const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(
+    null,
+  );
   const [quantity, setQuantity] = useState("1");
   const [reorderLevel, setReorderLevel] = useState("20");
   const [searching, setSearching] = useState(false);
@@ -94,7 +96,7 @@ export default function InventoryPage() {
       });
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Could not load pharmacies."
+        err instanceof Error ? err.message : "Could not load pharmacies.",
       );
     } finally {
       setLoading(false);
@@ -113,7 +115,7 @@ export default function InventoryPage() {
       setInventory(response.data);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Could not load inventory."
+        err instanceof Error ? err.message : "Could not load inventory.",
       );
     }
   }, [pharmacyId]);
@@ -153,9 +155,7 @@ export default function InventoryPage() {
         setNotice("");
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Medicine search failed."
-      );
+      setError(err instanceof Error ? err.message : "Medicine search failed.");
     } finally {
       setSearching(false);
     }
@@ -173,7 +173,9 @@ export default function InventoryPage() {
       !Number.isInteger(reorder) ||
       reorder < 0
     ) {
-      setError("Quantity and reorder level must be whole numbers of 0 or more.");
+      setError(
+        "Quantity and reorder level must be whole numbers of 0 or more.",
+      );
       return;
     }
 
@@ -198,9 +200,7 @@ export default function InventoryPage() {
 
       await loadInventory();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Could not add medicine."
-      );
+      setError(err instanceof Error ? err.message : "Could not add medicine.");
     } finally {
       setSaving(false);
     }
@@ -209,9 +209,11 @@ export default function InventoryPage() {
   async function updateStock(
     item: InventoryItem,
     movementType: string,
-    rawAmount: string
+    rawAmount: string,
   ) {
     if (!token || !pharmacyId || !item.medicine) return;
+
+    if (movementType === "SALE") return;
 
     const amount = Number(rawAmount);
 
@@ -220,17 +222,14 @@ export default function InventoryPage() {
       return;
     }
 
-    if (
-      movementType !== "ADJUSTMENT" &&
-      amount < 0
-    ) {
+    if (movementType !== "ADJUSTMENT" && amount < 0) {
       setError("Enter a positive quantity for this movement.");
       return;
     }
 
     let quantityChange = amount;
 
-    if (["SALE", "EXPIRED", "DAMAGED"].includes(movementType)) {
+    if (["EXPIRED", "DAMAGED"].includes(movementType)) {
       quantityChange = -Math.abs(amount);
     } else if (movementType === "RESTOCK") {
       quantityChange = Math.abs(amount);
@@ -251,38 +250,76 @@ export default function InventoryPage() {
       setNotice("Stock updated successfully.");
       await loadInventory();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Stock update failed."
+      setError(err instanceof Error ? err.message : "Stock update failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function recordSale(
+    item: InventoryItem,
+    requestedQuantity: number,
+    fulfilledQuantity: number,
+  ) {
+    if (!token || !pharmacyId || !item.medicine) return;
+
+    if (
+      !Number.isInteger(requestedQuantity) ||
+      requestedQuantity <= 0 ||
+      !Number.isInteger(fulfilledQuantity) ||
+      fulfilledQuantity < 0 ||
+      fulfilledQuantity > requestedQuantity
+    ) {
+      setError("Enter valid requested and fulfilled quantities.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      await recordSaleRequest(token, {
+        pharmacyId,
+        medicineId: item.medicine._id,
+        requestedQuantity,
+        fulfilledQuantity,
+      });
+
+      setNotice(
+        `Sale recorded. Unmet demand: ${requestedQuantity - fulfilledQuantity}.`,
       );
+
+      await loadInventory();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sale recording failed.");
     } finally {
       setSaving(false);
     }
   }
 
   if (!ready || !user || user.role !== "PHARMACY_OWNER") {
-    return <main className="p-6 text-sm text-gray-500">Loading inventory...</main>;
+    return (
+      <main className="p-6 text-sm text-gray-500">Loading inventory...</main>
+    );
   }
 
   const selectedPharmacy = pharmacies.find((p) => p._id === pharmacyId);
 
   const availableCount = inventory.filter(
-    (item) => item.status === "AVAILABLE"
+    (item) => item.status === "AVAILABLE",
   ).length;
 
-  const lowCount = inventory.filter(
-    (item) => item.status === "LOW"
-  ).length;
+  const lowCount = inventory.filter((item) => item.status === "LOW").length;
 
   const outCount = inventory.filter(
-    (item) => item.status === "OUT_OF_STOCK"
+    (item) => item.status === "OUT_OF_STOCK",
   ).length;
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
       <header>
-        <p className="text-sm font-medium text-blue-600">
-          PHARMACY MANAGEMENT
-        </p>
+        <p className="text-sm font-medium text-blue-600">PHARMACY MANAGEMENT</p>
         <h1 className="mt-1 text-3xl font-bold text-gray-900">
           Inventory Management
         </h1>
@@ -292,13 +329,19 @@ export default function InventoryPage() {
       </header>
 
       {error && (
-        <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+        <div
+          role="alert"
+          className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
+        >
           {error}
         </div>
       )}
 
       {notice && (
-        <div role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+        <div
+          role="status"
+          className="rounded-lg bg-green-50 p-3 text-sm text-green-800"
+        >
           {notice}
         </div>
       )}
@@ -321,7 +364,10 @@ export default function InventoryPage() {
       ) : (
         <>
           <section className="rounded-xl border border-gray-200 bg-white p-4">
-            <label htmlFor="pharmacy" className="mb-2 block text-sm font-medium">
+            <label
+              htmlFor="pharmacy"
+              className="mb-2 block text-sm font-medium"
+            >
               Select pharmacy
             </label>
             <select
@@ -345,8 +391,16 @@ export default function InventoryPage() {
 
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: "Total medicines", value: inventory.length, style: "bg-blue-50" },
-              { label: "Available", value: availableCount, style: "bg-green-50" },
+              {
+                label: "Total medicines",
+                value: inventory.length,
+                style: "bg-blue-50",
+              },
+              {
+                label: "Available",
+                value: availableCount,
+                style: "bg-green-50",
+              },
               { label: "Low stock", value: lowCount, style: "bg-amber-50" },
               { label: "Out of stock", value: outCount, style: "bg-red-50" },
             ].map((stat) => (
@@ -403,6 +457,7 @@ export default function InventoryPage() {
                         item={item}
                         saving={saving}
                         onUpdate={updateStock}
+                        onSale={recordSale}
                       />
                     ))}
                   </tbody>
@@ -430,7 +485,11 @@ export default function InventoryPage() {
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Medicine name or generic name"
               />
-              <button className={buttonClass} disabled={searching} type="submit">
+              <button
+                className={buttonClass}
+                disabled={searching}
+                type="submit"
+              >
                 {searching ? "Searching..." : "Search medicines"}
               </button>
             </form>
@@ -446,7 +505,8 @@ export default function InventoryPage() {
                     >
                       <span className="font-medium">{medicine.name}</span>
                       <span className="block text-sm text-gray-500">
-                        {medicine.genericName} · {medicine.strength} · {medicine.dosageForm}
+                        {medicine.genericName} · {medicine.strength} ·{" "}
+                        {medicine.dosageForm}
                       </span>
                     </button>
                   </li>
@@ -512,10 +572,12 @@ export default function InventoryPage() {
   );
 }
 
+
 function StockRow({
   item,
   saving,
   onUpdate,
+  onSale,
 }: {
   item: InventoryItem;
   saving: boolean;
@@ -524,9 +586,28 @@ function StockRow({
     movementType: string,
     amount: string
   ) => Promise<void>;
+  onSale: (
+    item: InventoryItem,
+    requestedQuantity: number,
+    fulfilledQuantity: number
+  ) => Promise<void>;
 }) {
   const [movement, setMovement] = useState("SALE");
   const [amount, setAmount] = useState("1");
+  const [requestedAmount, setRequestedAmount] = useState("1");
+  const [fulfilledAmount, setFulfilledAmount] = useState("1");
+
+  const requested = Number(requestedAmount);
+  const fulfilled = Number(fulfilledAmount);
+
+  const validSale =
+    Number.isInteger(requested) &&
+    requested > 0 &&
+    Number.isInteger(fulfilled) &&
+    fulfilled >= 0 &&
+    fulfilled <= requested;
+
+  const unmet = validSale ? requested - fulfilled : 0;
 
   return (
     <tr className="border-t border-gray-100 align-top">
@@ -538,20 +619,27 @@ function StockRow({
           {item.medicine?.genericName} · {item.medicine?.strength}
         </p>
       </td>
+
       <td className="p-3 font-semibold">{item.quantity}</td>
+
       <td className="p-3">{item.reorderLevel}</td>
+
       <td className="p-3">
-        <span className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium ${statusStyles[item.status]}`}>
+        <span
+          className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium ${statusStyles[item.status]}`}
+        >
           {item.status.replaceAll("_", " ")}
         </span>
       </td>
+
       <td className="p-3 text-gray-500">
         {item.lastStockUpdatedAt
           ? new Date(item.lastStockUpdatedAt).toLocaleString()
           : "—"}
       </td>
+
       <td className="p-3">
-        <div className="flex min-w-[280px] flex-wrap gap-2">
+        <div className="flex min-w-[280px] flex-col gap-2">
           <select
             className={inputClass}
             value={movement}
@@ -564,21 +652,73 @@ function StockRow({
               </option>
             ))}
           </select>
-          <input
-            className={`${inputClass} w-20`}
-            type="number"
-            step="1"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            aria-label="Movement quantity"
-          />
-          <button
-            className={buttonClass}
-            disabled={saving || !item.medicine}
-            onClick={() => void onUpdate(item, movement, amount)}
-          >
-            Apply
-          </button>
+
+          {movement === "SALE" ? (
+            <>
+              <label className="text-xs text-gray-600">
+                Requested quantity
+                <input
+                  className={`${inputClass} mt-1 w-full`}
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={requestedAmount}
+                  onChange={(event) =>
+                    setRequestedAmount(event.target.value)
+                  }
+                />
+              </label>
+
+              <label className="text-xs text-gray-600">
+                Fulfilled quantity
+                <input
+                  className={`${inputClass} mt-1 w-full`}
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={fulfilledAmount}
+                  onChange={(event) =>
+                    setFulfilledAmount(event.target.value)
+                  }
+                />
+              </label>
+
+              <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800">
+                Unmet demand: <strong>{unmet}</strong>
+              </p>
+
+              <button
+                className={buttonClass}
+                disabled={saving || !item.medicine || !validSale}
+                onClick={() =>
+                  void onSale(item, requested, fulfilled)
+                }
+              >
+                Record sale
+              </button>
+            </>
+          ) : (
+            <>
+              <input
+                className={`${inputClass} w-full`}
+                type="number"
+                step="1"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                aria-label="Movement quantity"
+              />
+
+              <button
+                className={buttonClass}
+                disabled={saving || !item.medicine}
+                onClick={() =>
+                  void onUpdate(item, movement, amount)
+                }
+              >
+                Apply
+              </button>
+            </>
+          )}
         </div>
       </td>
     </tr>

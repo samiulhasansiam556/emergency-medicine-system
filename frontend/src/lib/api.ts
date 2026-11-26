@@ -591,3 +591,20 @@ export function deactivateAdminPharmacy(
     }
   );
 }
+
+
+export function recordSaleRequest(
+  token: string,
+  body: {
+    pharmacyId: string;
+    medicineId: string;
+    requestedQuantity: number;
+    fulfilledQuantity: number;
+  }
+) {
+  return request("/api/inventory/sale", {
+    method: "POST",
+    body,
+    token,
+  });
+}
