@@ -202,7 +202,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 maxLength={254}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
+                placeholder="owner1@seed.medfinder.test or admin@seed.medfinder.test "
                 className={fieldClass}
               />
             </div>
@@ -210,7 +210,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
             <div>
               <div className="flex items-center justify-between gap-3">
                 <label
-                  htmlFor="password"
+                  htmlFor="Password"
                   className="text-sm font-semibold text-slate-700"
                 >
                   Password
@@ -232,7 +232,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 minLength={8}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="At least 8 characters"
+                placeholder="Password123!"
                 className={fieldClass}
               />
             </div>

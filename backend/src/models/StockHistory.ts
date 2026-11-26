@@ -1,5 +1,6 @@
 
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { kill } from "node:process";
 
 export type StockMovementType =
   | "INITIAL_STOCK"
